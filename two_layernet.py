@@ -54,7 +54,7 @@ class TwoLayerNet(object):
     def softmax(self,x):
         """Compute softmax values for each sets of scores in x."""
         e_x = np.exp(x)
-        return e_x / e_x.sum(axis=0)
+        return e_x / e_x.sum(axis=1, keepdims=True)
 
     def loss(self, X, y=None, reg=0.0):
         """
@@ -101,13 +101,11 @@ class TwoLayerNet(object):
         C=3
         scores = np.zeros((N,C))
 
-        # for i in range(N): 
-        a1=X
-        b1=b1.reshape(b1.shape[0], 1)
-        z2 = np.dot(W1.T,a1.T) + b1
-        a2 = np.maximum(0, z2)
-        z3 = np.dot(a2.T, W2) + b2   
-        scores = self.softmax(z3.T).T
+        a1=X  #NxD
+        z2 = np.dot(a1,W1) + b1.T  #NxD * DxH + 1xH (broadcasting to NxH) = NxH
+        a2 = np.maximum(0, z2)  #NxH
+        z3 = np.dot(a2,W2) + b2.T #NxH * HxC + 1xC (broadcasting to NxC) = NxC
+        scores = self.softmax(z3) #NxC
         
         # print("a1",a1.shape)
         # print("b1",b1.shape)
