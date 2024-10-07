@@ -1,0 +1,6 @@
+# bytecode files
+__pycache__/
+*.py[cod]
+
+# compiled Python files
+*.pyo
