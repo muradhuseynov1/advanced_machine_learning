@@ -139,7 +139,13 @@ class TwoLayerNet(object):
         
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
+        cross_entropy = -np.log(scores[range(N), y])  #this gets scores[i, y[i]] for each i in [0,n-1]
+        #i is the i-th sample, y[i] is the correct class for i, scores[i, y[i]] is the predicted class for i
+        data_loss = np.sum(cross_entropy) / N
+
+        l2_reg = reg * (np.sum(W1**2) + np.sum(W2**2))
         
+        loss = data_loss + l2_reg
         
         pass
 
@@ -156,7 +162,23 @@ class TwoLayerNet(object):
 
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
+        #we need to create a one hot encoding of the matrix Y
+        #it is basically a matrix NxC containing vectors 1xC where the jth element of the vector is 1 if j=y_i
+        #it means that given a vector of this matrix, it has 1 on the element which corresponds to its class and 0s for all the other classes
+
+        Y = np.zeros(shape=(N,C))
+        Y[range(N),y] = 1   #this is a loop of Y[i, y[i]] = 1
+
+        dLoss_wrt_z = (scores - Y) / N
+
+        grads['W2'] = np.dot(a2.T, dLoss_wrt_z) + 2*reg*W2 #HxN * NxC = HxC
+        grads['b2'] = np.sum(dLoss_wrt_z, axis=0) #sum because b2 is the same for all samples
+
+        dLoss_wrt_a2 = np.dot(dLoss_wrt_z, W2.T) * (z2 > 0)  #NxH
+        dLoss_wrt_z2 = dLoss_wrt_a2
         
+        grads['W1'] = np.dot(a1.T, dLoss_wrt_z2) + 2*reg*W1  #DxH
+        grads['b1'] = np.sum(dLoss_wrt_z2, axis=0)   #Hx1
 
         pass
 
