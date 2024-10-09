@@ -72,6 +72,11 @@ X, y = init_toy_data()
 scores = net.loss(X)
 print('Your scores:')
 print(scores)
+
+# see if scores sum up to 1
+print('Sum of scores:', np.sum(scores, axis=1))
+
+
 print()
 print('correct scores:')
 correct_scores = np.asarray([
@@ -91,6 +96,7 @@ print(np.sum(np.abs(scores - correct_scores)))
 # Forward pass: compute loss. In the same function, implement the second part
 # that computes the data and regularization loss.
 loss, _ = net.loss(X, y, reg=0.05)
+print('Loss: ', loss)
 correct_loss = 1.30378789133
 
 # should be very small, we get < 1e-12
@@ -138,7 +144,7 @@ for param_name in grads:
 net = init_toy_model()
 stats = net.train(X, y, X, y,
             learning_rate=1e-1, reg=5e-6,
-            num_iters=100, verbose=True)
+            num_iters=100, verbose=False)
 
 print('Final training loss: ', stats['loss_history'][-1])
 
@@ -275,9 +281,43 @@ best_net = None # store the best model into this
 
 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+# hyperparameters: hidden layer size,
+# learning rate, numer of training epochs, and regularization strength
+# num_iters, batch_size, learning_rate_decay (should get good performance with default)
 
+# Define ranges for hyperparameters
+hidden_sizes = [50, 100, 200] # increase model size to increase capacity (to avoid overfitting: increase reg or add dropout or early stopping) (preferred way: large model heavily regularized)
+learning_rates = [1e-3, 1e-2, 1e-1] #1e-4 was too low
+regularization_strengths = [0.3, 0.4, 0.5, 0.6] #reg > 0.25
+#num_epochs = [10, 20] # not in the code # num_epochs is the number of times the model sees the data
+num_iters = [1000, 2000] # num_iters is for each epoch and it's the number of mini-batches?
+batch_sizes = [200, 400] 
 
-pass
+# Initialize best validation accuracy
+best_val_acc = 0
+
+# Loop over hyperparameters
+# Generate the Cartesian product of hyperparameters
+hyperparams = np.array(np.meshgrid(hidden_sizes, learning_rates, regularization_strengths, num_iters, batch_sizes)).T.reshape(-1, 5)
+#print('hyperparam shape:', hyperparams.shape) #(144,5)
+
+for row in hyperparams:
+    hidden_size, learning_rate, reg, num_iter, batch_size = row
+    net = TwoLayerNet(input_size, int(hidden_size), num_classes)
+    stats = net.train(X_train, y_train, X_val, y_val,
+            num_iters=int(num_iter), batch_size=int(batch_size),
+            learning_rate=learning_rate, learning_rate_decay=0.95,
+            reg=reg, verbose=False)
+    
+    # Predict on the validation set
+    val_acc = (net.predict(X_val) == y_val).mean()
+    print('Validation accuracy: ', val_acc)
+    
+    if val_acc > best_val_acc:
+        best_val_acc = val_acc
+        best_net = net
+        best_hyperparams = row
+    
 
 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 

@@ -1,4 +1,5 @@
 from __future__ import print_function
+
 from builtins import range
 from builtins import object
 import numpy as np
@@ -51,10 +52,6 @@ class TwoLayerNet(object):
         self.params['b2'] = np.zeros(output_size)
 
 
-    def softmax(self,x):
-        """Compute softmax values for each sets of scores in x."""
-        e_x = np.exp(x)
-        return e_x / e_x.sum(axis=1, keepdims=True)
 
     def loss(self, X, y=None, reg=0.0):
         """
@@ -86,7 +83,8 @@ class TwoLayerNet(object):
         N, D = X.shape
 
         # Compute the forward pass
-        scores = 0.
+        scores = np.zeros((N, 3)) # (5,3)
+
         
         #############################################################################
         # TODO: Perform the forward pass, computing the class probabilities for the #
@@ -95,28 +93,12 @@ class TwoLayerNet(object):
         #############################################################################
         
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        #N number of rows and samples
-        #D number of features
-        #C number of classes
-        C=3
-        scores = np.zeros((N,C))
-
-        a1=X  #NxD
-        z2 = np.dot(a1,W1) + b1.T  #NxD * DxH + 1xH (broadcasting to NxH) = NxH
-        a2 = np.maximum(0, z2)  #NxH
-        z3 = np.dot(a2,W2) + b2.T #NxH * HxC + 1xC (broadcasting to NxC) = NxC
-        scores = self.softmax(z3) #NxC
-        
-        # print("a1",a1.shape)
-        # print("b1",b1.shape)
-        # print("z2", z2.shape)
-        # print("a2",a2.shape)
-        # print("W2",W2.shape)
-        # print("z3",z3.shape)
-          
-
-        pass
-
+        a1 = X # a1 (5x4), W1 (4x10), b1 (10,)
+        z2 = W1.T.dot(a1.T) + b1.reshape(-1, 1)  #z2 (10x5)
+        a2 = np.maximum(0, z2)  # ReLU activation # a2 (10x5)
+        z3 = a2.T.dot(W2) + b2 # z3 (5x3) W2 (10x3) b2 (3,)
+        z3 -= np.max(z3, axis=1, keepdims=True) # for numerical stability
+        scores = np.exp(z3) / np.sum(np.exp(z3), axis=1, keepdims=True) #(5,3) # Softmax activation
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
 
@@ -126,7 +108,7 @@ class TwoLayerNet(object):
 
 
         # Compute the loss
-        loss = 0.
+        loss = 0. #scalar
         
         #############################################################################
         # TODO: Finish the forward pass, and compute the loss. This should include  #
@@ -138,17 +120,11 @@ class TwoLayerNet(object):
         # Implement the loss for the softmax output layer
         
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        
-        cross_entropy = -np.log(scores[range(N), y])  #this gets scores[i, y[i]] for each i in [0,n-1]
-        #i is the i-th sample, y[i] is the correct class for i, scores[i, y[i]] is the predicted class for i
-        data_loss = np.sum(cross_entropy) / N
-
-        l2_reg = reg * (np.sum(W1**2) + np.sum(W2**2))
-        
-        loss = data_loss + l2_reg
-        
-        pass
-
+        # Cross-entropy loss
+        Q = scores[range(N), y] # Q (5,)  scores[i, y[i]] 
+        loss = 1/N * np.sum(-np.log(Q)) 
+        # loss + L2 regularization
+        loss += reg * (np.sum(W1**2)+np.sum(W2**2))
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
         # Backward pass: compute gradients
@@ -161,26 +137,24 @@ class TwoLayerNet(object):
         ##############################################################################
 
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        
-        #we need to create a one hot encoding of the matrix Y
-        #it is basically a matrix NxC containing vectors 1xC where the jth element of the vector is 1 if j=y_i
-        #it means that given a vector of this matrix, it has 1 on the element which corresponds to its class and 0s for all the other classes
-
-        Y = np.zeros(shape=(N,C))
-        Y[range(N),y] = 1   #this is a loop of Y[i, y[i]] = 1
-
-        dLoss_wrt_z = (scores - Y) / N
-
-        grads['W2'] = np.dot(a2.T, dLoss_wrt_z) + 2*reg*W2 #HxN * NxC = HxC
-        grads['b2'] = np.sum(dLoss_wrt_z, axis=0) #sum because b2 is the same for all samples
-
-        dLoss_wrt_a2 = np.dot(dLoss_wrt_z, W2.T) * (z2 > 0)  #NxH
-        dLoss_wrt_z2 = dLoss_wrt_a2
-        
-        grads['W1'] = np.dot(a1.T, dLoss_wrt_z2) + 2*reg*W1  #DxH
-        grads['b1'] = np.sum(dLoss_wrt_z2, axis=0)   #Hx1
-
-        pass
+        delta = np.zeros_like(scores)
+        delta[range(N), y] = 1
+        dL_dz3 = 1/N * (scores - delta) # (5,3)
+        """
+        print(z3.shape) #(5,3)
+        print (a2.shape) #(10,5)
+        print (W2.shape) #(10,3)
+        print(b2.shape) #(3,)
+        print (a1.shape) #(5,4)
+        print (W1.shape) #(4,10)
+        print(b1.shape) #(10,)
+        print((reg*W2).shape) #(10,3)
+        """
+        grads['W2'] = a2.dot(dL_dz3) + 2*reg*W2 # (10,5) * (5,3) + (10,3) = (10,3)
+        grads['b2'] = np.sum(dL_dz3, axis=0) # (3,)
+        dL_dz2 = dL_dz3.dot(W2.T) * ((z2.T > 0)) # (5,3) * (3,10) * (10,5) = (5,5)
+        grads['W1'] = (a1.T.dot(dL_dz2)) + 2*reg*W1 # (4,5) * (5,10) + (4,10) = (4,10)
+        grads['b1'] = np.sum(dL_dz2, axis=0) #(10)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -230,9 +204,11 @@ class TwoLayerNet(object):
             
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             
+            # select batch_size random indices and use them to index into X and y
+            idx_batch = np.random.choice(num_train, batch_size, replace=True)
+            X_batch = X[idx_batch]
+            y_batch = y[idx_batch]
             
-            
-            pass
         
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -248,11 +224,12 @@ class TwoLayerNet(object):
             #########################################################################
             
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-            
-            
-            
-            pass
-        
+
+            self.params['W1'] -= learning_rate * grads['W1']
+            self.params['b1'] -= learning_rate * grads['b1']
+            self.params['W2'] -= learning_rate * grads['W2']
+            self.params['b2'] -= learning_rate * grads['b2']
+
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
             if verbose and it % 100 == 0:
@@ -299,10 +276,9 @@ class TwoLayerNet(object):
         ###########################################################################
         
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-
-
-        pass
+        
+        scores = self.loss(X)
+        y_pred = np.argmax(scores, axis=1)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
