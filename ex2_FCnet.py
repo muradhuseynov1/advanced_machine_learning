@@ -91,6 +91,7 @@ print(np.sum(np.abs(scores - correct_scores)))
 # Forward pass: compute loss. In the same function, implement the second part
 # that computes the data and regularization loss.
 loss, _ = net.loss(X, y, reg=0.05)
+print("loss", loss)
 correct_loss = 1.30378789133
 
 # should be very small, we get < 1e-12

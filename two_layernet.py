@@ -138,14 +138,11 @@ class TwoLayerNet(object):
         # Implement the loss for the softmax output layer
         
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        cross_entropy_loss = -np.log(scores[range(N),y]) #N
+        data_loss = np.sum(cross_entropy_loss)/N
+        reg_loss = reg*(np.sum(W1*W1) + np.sum(W2*W2))
+        loss = data_loss + reg_loss
         
-        cross_entropy = -np.log(scores[range(N), y])  #this gets scores[i, y[i]] for each i in [0,n-1]
-        #i is the i-th sample, y[i] is the correct class for i, scores[i, y[i]] is the predicted class for i
-        data_loss = np.sum(cross_entropy) / N
-
-        l2_reg = reg * (np.sum(W1**2) + np.sum(W2**2))
-        
-        loss = data_loss + l2_reg
         
         pass
 
@@ -161,24 +158,18 @@ class TwoLayerNet(object):
         ##############################################################################
 
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        # dL_dz3 = (1/N * (scores[range(N), y] - 1)).reshape(-1,1) #(5,)
+        dL_dz3 = scores  # NxC
+        dL_dz3[range(N), y] -= 1  # Subtract 1 for the correct class
+        dL_dz3 /= N  # Average over the number of samples
+
+        grads['W2'] = a2.T.dot(dL_dz3) + 2*reg*W2
+        grads['b2'] = np.sum(dL_dz3, axis=0)
+
+        dL_dz2 = dL_dz3.dot(W2.T) * (z2 > 0) # it is derivative of ReLU, so check if z2>0
         
-        #we need to create a one hot encoding of the matrix Y
-        #it is basically a matrix NxC containing vectors 1xC where the jth element of the vector is 1 if j=y_i
-        #it means that given a vector of this matrix, it has 1 on the element which corresponds to its class and 0s for all the other classes
-
-        Y = np.zeros(shape=(N,C))
-        Y[range(N),y] = 1   #this is a loop of Y[i, y[i]] = 1
-
-        dLoss_wrt_z = (scores - Y) / N
-
-        grads['W2'] = np.dot(a2.T, dLoss_wrt_z) + 2*reg*W2 #HxN * NxC = HxC
-        grads['b2'] = np.sum(dLoss_wrt_z, axis=0) #sum because b2 is the same for all samples
-
-        dLoss_wrt_a2 = np.dot(dLoss_wrt_z, W2.T) * (z2 > 0)  #NxH
-        dLoss_wrt_z2 = dLoss_wrt_a2
-        
-        grads['W1'] = np.dot(a1.T, dLoss_wrt_z2) + 2*reg*W1  #DxH
-        grads['b1'] = np.sum(dLoss_wrt_z2, axis=0)   #Hx1
+        grads['W1'] = a1.T.dot(dL_dz2) + 2*reg*W1
+        grads['b1'] = np.sum(dL_dz2, axis=0)
 
         pass
 
