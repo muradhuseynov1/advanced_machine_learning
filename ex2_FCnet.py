@@ -286,12 +286,19 @@ best_net = None # store the best model into this
 # num_iters, batch_size, learning_rate_decay (should get good performance with default)
 
 # Define ranges for hyperparameters
-hidden_sizes = [50, 100, 200] # increase model size to increase capacity (to avoid overfitting: increase reg or add dropout or early stopping) (preferred way: large model heavily regularized)
+"""
+hidden_sizes = [20, 35, 50] # increase model size to increase capacity (to avoid overfitting: increase reg or add dropout or early stopping) (preferred way: large model heavily regularized)
 learning_rates = [1e-3, 1e-2, 1e-1] #1e-4 was too low
 regularization_strengths = [0.3, 0.4, 0.5, 0.6] #reg > 0.25
-#num_epochs = [10, 20] # not in the code # num_epochs is the number of times the model sees the data
 num_iters = [1000, 2000] # num_iters is for each epoch and it's the number of mini-batches?
-batch_sizes = [200, 400] 
+batch_sizes = [200, 300, 400] 
+"""
+
+hidden_sizes = [50, 100, 150]
+learning_rates = [1e-3, 5e-3, 1e-2]
+regularization_strengths = [0.001, 0.1, 0.3, 0.5]
+num_iters = [1000, 2000]
+batch_sizes = [64, 128, 256, 512]
 
 # Initialize best validation accuracy
 best_val_acc = 0

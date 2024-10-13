@@ -112,7 +112,17 @@ class MultiLayerPerceptron(nn.Module):
         
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
-        
+        # Input layer to first hidden layer
+        layers.append(nn.Linear(input_size, hidden_layers[0]))
+        layers.append(nn.ReLU())
+
+        # Hidden layers
+        for i in range(1, len(hidden_layers)):
+            layers.append(nn.Linear(hidden_layers[i-1], hidden_layers[i]))
+            layers.append(nn.ReLU())
+
+        # Hidden layer to output layer
+        layers.append(nn.Linear(hidden_layers[-1], num_classes))
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
@@ -130,76 +140,117 @@ class MultiLayerPerceptron(nn.Module):
         
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
 
+        # fully connected layers expect input in the form of 1D vectors
+        # flatten 2D image into a 1D vector
+        # usually x is shape (batch_size, num_channels, height, width) = (batch_size, 3, 32, 32)
+        # change it to (batch_size, num_channels*height*width) = (200, 3072)
 
+        x = x.view(x.size(0), -1) # flattening all dimensions except the first
+        out = self.layers(x)
 
         # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
         
         return out
+"""
+hidden_sizes = [
+    [50],  # 1 hidden layer
+    #[1024, 512],  # 2 hidden layers
+    #[1024, 512, 256],  # 3 hidden layers
+    #[1024, 512, 256, 128],  # 4 hidden layers
+    #[1024, 512, 256, 128, 64]  # 5 hidden layers
+]   
+"""
 
-model = MultiLayerPerceptron(input_size, hidden_size, num_classes).to(device)
-# Print model's state_dict
-'''
-print("Model's state_dict:")
-for param_tensor in model.state_dict():
-    print(param_tensor, "\t", model.state_dict()[param_tensor].size())
-'''
+hidden_sizes = [
+    [50],  # 1 hidden layer
+    #[512, 128],  # 2 hidden layers
+    #[512, 128, 64],  # 3 hidden layers
+    #[512, 128, 64, 32],  # 4 hidden layers
+    #[512, 128, 64, 32, 16]  # 5 hidden layers
+]  
 
-if train:
-    model.apply(weights_init)
-    model.train() #set dropout and batch normalization layers to training mode
+best_model = None
+best_acc = 0
 
-    # Loss and optimizer
-    criterion = nn.CrossEntropyLoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=reg)
+for hidden_size in hidden_sizes:
 
-    # Train the model
-    lr = learning_rate
-    total_step = len(train_loader)
-    for epoch in range(num_epochs):
-        for i, (images, labels) in enumerate(train_loader):
-            # Move tensors to the configured device
-            images = images.to(device)
-            labels = labels.to(device)
-            #################################################################################
-            # TODO: Implement the training code                                             #
-            # 1. Pass the images to the model                                               #
-            # 2. Compute the loss using the output and the labels.                          #
-            # 3. Compute gradients and update the model using the optimizer                 #
-            # Use examples in https://pytorch.org/tutorials/beginner/pytorch_with_examples.html
-            #################################################################################
-            # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+    model = MultiLayerPerceptron(input_size, hidden_size, num_classes).to(device)
+    # Print model's state_dict
+    '''
+    print("Model's state_dict:")
+    for param_tensor in model.state_dict():
+        print(param_tensor, "\t", model.state_dict()[param_tensor].size())
+    '''
 
+    if train:
+        model.apply(weights_init)
+        model.train() #set dropout and batch normalization layers to training mode
 
+        # Loss and optimizer
+        criterion = nn.CrossEntropyLoss()
+        optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate, weight_decay=reg)
 
-            # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-            if (i+1) % 100 == 0:
-                print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'
-                       .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
-
-        # Code to update the lr
-        lr *= learning_rate_decay
-        update_lr(optimizer, lr)
-        with torch.no_grad():
-            correct = 0
-            total = 0
-            for images, labels in val_loader:
+        # Train the model
+        lr = learning_rate
+        total_step = len(train_loader)
+        for epoch in range(num_epochs):
+            for i, (images, labels) in enumerate(train_loader):
+                # Move tensors to the configured device
                 images = images.to(device)
                 labels = labels.to(device)
-                ####################################################
-                # TODO: Implement the evaluation code              #
-                # 1. Pass the images to the model                  #
-                # 2. Get the most confident predicted class        #
-                ####################################################
+                #################################################################################
+                # TODO: Implement the training code                                             #
+                # 1. Pass the images to the model                                               #
+                # 2. Compute the loss using the output and the labels.                          #
+                # 3. Compute gradients and update the model using the optimizer                 #
+                # Use examples in https://pytorch.org/tutorials/beginner/pytorch_with_examples.html
+                #################################################################################
                 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-            
+                # forward pass
+                raw_scores = model(images)
+                # compute loss
+                loss = criterion(raw_scores, labels)
+                # zero the parameter gradients to prevent acumulation from previous iterations
+                optimizer.zero_grad()
+                # compute gradients
+                loss.backward()
+                # update model
+                optimizer.step()
 
                 # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-                total += labels.size(0)
-                correct += (predicted == labels).sum().item()
 
-            print('Validataion accuracy is: {} %'.format(100 * correct / total))
+                if (i+1) % 100 == 0:
+                    print ('Epoch [{}/{}], Step [{}/{}], Loss: {:.4f}'
+                        .format(epoch+1, num_epochs, i+1, total_step, loss.item()))
+
+            # Code to update the lr
+            lr *= learning_rate_decay
+            update_lr(optimizer, lr)
+            with torch.no_grad():
+                correct = 0
+                total = 0
+                for images, labels in val_loader:
+                    images = images.to(device)
+                    labels = labels.to(device)
+                    ####################################################
+                    # TODO: Implement the evaluation code              #
+                    # 1. Pass the images to the model                  #
+                    # 2. Get the most confident predicted class        #
+                    ####################################################
+                    # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+                    raw_scores = model(images)
+                    _, predicted = torch.max(raw_scores.data, 1)  # first tensor contains the maximum values, second tensor contains the indices 
+                    # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+                    total += labels.size(0)
+                    correct += (predicted == labels).sum().item()
+
+                accuracy = 100 * correct / total
+                print('Validation accuracy is: {} %'.format(accuracy))
+                
+                # Check if this is the best model so far
+                if accuracy > best_acc:
+                    best_acc = accuracy
+                    best_model = model
 
     ##################################################################################
     # TODO: Now that you can train a simple two-layer MLP using above code, you can  #
@@ -214,9 +265,10 @@ if train:
     # dropout layers, if you are interested. Use the best model on the validation    #
     # set, to evaluate the performance on the test set once and report it            #
     ##################################################################################
-
+        
     # Save the model checkpoint
-    torch.save(model.state_dict(), 'model.ckpt')
+    # saving the model's state dictionary allows you to reload the model later and resume training or perform inference without retraining from scratch.
+    torch.save(best_model.state_dict(), 'model.ckpt') #save in specified file the state dictionary (all learnable parameters (weights and biases))
 
 else:
     # Run the test code once you have your by setting train flag to false
@@ -243,9 +295,8 @@ else:
             # 2. Get the most confident predicted class        #
             ####################################################
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-
-            
-
+            raw_scores = model(images)
+            _, predicted = torch.max(raw_scores.data, 1)  # first tensor contains the maximum values, second tensor contains the indices
             # *****END OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
             total += labels.size(0)
             correct += (predicted == labels).sum().item()
