@@ -55,6 +55,13 @@ class TwoLayerNet(object):
         """Compute softmax values for each sets of scores in x."""
         e_x = np.exp(x)
         return e_x / e_x.sum(axis=1, keepdims=True)
+    
+    # def softmax(self, x):
+    #     """Compute softmax values for each set of scores in x in a numerically stable way."""
+    #     shift_x = x - np.max(x, axis=1, keepdims=True)  # Shift the logits by subtracting the maximum value
+    #     e_x = np.exp(shift_x)
+    #     return e_x / np.sum(e_x, axis=1, keepdims=True)
+
 
     def loss(self, X, y=None, reg=0.0):
         """
@@ -99,9 +106,11 @@ class TwoLayerNet(object):
         #D number of features
         #C number of classes
         C=3
+
+        # scores <==> z3, first we initialize it to zeros
         scores = np.zeros((N,C))
 
-        a1=X  #NxD
+        a1=X  #NxD: (5x4)
         z2 = np.dot(a1,W1) + b1.T  #NxD * DxH + 1xH (broadcasting to NxH) = NxH
         a2 = np.maximum(0, z2)  #NxH
         z3 = np.dot(a2,W2) + b2.T #NxH * HxC + 1xC (broadcasting to NxC) = NxC
@@ -113,7 +122,6 @@ class TwoLayerNet(object):
         # print("a2",a2.shape)
         # print("W2",W2.shape)
         # print("z3",z3.shape)
-          
 
         pass
 
@@ -158,7 +166,23 @@ class TwoLayerNet(object):
         ##############################################################################
 
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-        # dL_dz3 = (1/N * (scores[range(N), y] - 1)).reshape(-1,1) #(5,)
+        # N - number of samples
+        # C - number of classes
+        # y - true labels (N,)
+        # scores - predicted probabilities (NxC), after softmax
+        # z3 - scores before softmax (NxC)
+        # L - loss
+        
+        # scores = softmax(z3) = exp(z3) / sum(exp(z3))
+        # L = -log(scores[range(N), y])
+        # dL_dz3 = dL_dscores * dscores_dz3
+        # dL_dscores = -1/scores * delta
+        # dscores_dz3 = scores * (1 - scores)
+        # dL_dz3 = -1/scores * delta * scores * (1 - scores) = scores - delta (divide by N for all samples)
+        # delta is 1 for the correct class and 0 for the rest, so we subtract 1 from the correct class
+
+        # dL_dz3 /= N is more memory efficient than dL_dz3 = dL_dz3 / N as it does not create a new array
+
         dL_dz3 = scores  # NxC
         dL_dz3[range(N), y] -= 1  # Subtract 1 for the correct class
         dL_dz3 /= N  # Average over the number of samples
@@ -220,8 +244,9 @@ class TwoLayerNet(object):
             #########################################################################
             
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-            
-            
+            batch_idx = np.random.choice(num_train, batch_size, replace=True)
+            X_batch = X[batch_idx]
+            y_batch = y[batch_idx]
             
             pass
         
@@ -239,7 +264,10 @@ class TwoLayerNet(object):
             #########################################################################
             
             # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
-            
+            self.params['W1'] -= learning_rate * grads['W1']
+            self.params['b1'] -= learning_rate * grads['b1']
+            self.params['W2'] -= learning_rate * grads['W2']
+            self.params['b2'] -= learning_rate * grads['b2']
             
             
             pass
@@ -290,6 +318,8 @@ class TwoLayerNet(object):
         ###########################################################################
         
         # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+        scores = self.loss(X)
+        y_pred = np.argmax(scores, axis=1)
 
 
 

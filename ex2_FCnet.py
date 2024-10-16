@@ -275,8 +275,37 @@ best_net = None # store the best model into this
 #################################################################################
 
 # *****START OF YOUR CODE (DO NOT DELETE/MODIFY THIS LINE)*****
+hidden_sizes = [150, 200]
+learning_rates = [1e-3, 5e-3]
+regularization_strengths = [0.1, 0.25]
+batch_sizes = [200, 256]
+num_iters = [3000, 4000]
 
+# Initialize best validation accuracy
+best_val_acc = 0
 
+# Loop over hyperparameters
+# Generate the Cartesian product of hyperparameters
+hyperparams = np.array(np.meshgrid(hidden_sizes, learning_rates, regularization_strengths, num_iters, batch_sizes)).T.reshape(-1, 5)
+#print('hyperparam shape:', hyperparams.shape) #(144,5)
+
+for row in hyperparams:
+    hidden_size, learning_rate, reg, num_iter, batch_size = row
+    net = TwoLayerNet(input_size, int(hidden_size), num_classes)
+    stats = net.train(X_train, y_train, X_val, y_val,
+            num_iters=int(num_iter), batch_size=int(batch_size),
+            learning_rate=learning_rate, learning_rate_decay=0.95,
+            reg=reg, verbose=False)
+    
+    # Predict on the validation set
+    val_acc = (net.predict(X_val) == y_val).mean()
+    print('Validation accuracy: ', val_acc)
+    
+    if val_acc > best_val_acc:
+        best_val_acc = val_acc
+        best_net = net
+        best_hyperparams = row
+    
 
 pass
 
